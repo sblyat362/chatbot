@@ -1,12 +1,8 @@
 {
-    {
-      "src": "Projectx/api/index.py",
-      "use": "@vercel/python"
-    }
   "routes": [
     {
       "src": "/.*",
-      "dest": "Projectx/api/index.py"
+      "dest": "api/index.py"
     }
   ]
 }
