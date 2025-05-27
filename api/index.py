@@ -1,17 +1,17 @@
 import base64
-import tempfile
+import json
 from flask import Flask, request, redirect
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import traceback
 
 app = Flask(__name__)
 
+# Your base64 encoded credentials string
 ENCODED_CREDS = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiYm9sZC1hbGx5LTQ2MTExMy1oMCIsCiAgInByaXZhdGVfa2V5X2lkIjogIjlmNWZhNmEzZGRjZWU2MmU5MDg4NTQzMWM2ODQwMjVkNTA1ZDAzYWEiLAogICJwcml2YXRlX2tleSI6ICItLS0tLUJFR0lOIFBSSVZBVEUgS0VZLS0tLS1cbk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRQzJwSEw1a00vRUtiU3pcbkRaWGtjUm53U2d4aG13cjVXRXFpQkJFWlNNMGF1UkdQdGluZ2E4S2w2akEydzA3V2JEaFNnSE5jQ3M0QTNtTXJcbitWbElKaUpmOW9wZU5YVUdFTkNDdFREV0Z5V29vM0lEOFZqdVhYMGFwRUt3Ykl4d1lSMldRTWpmcmg3bTcySDVcbk1nUXI0OEFnK08wYWI0dHE1ME9pQ0VuVFJ2d1BmTlJaUys4NUZxZ082RlpCL01OWFk1K1hoY1FKQXZiYlZOYW1cbmtEcmVWZUFiQmNOL2xZYzVsNms5aTl3Y0hRK2g4Z3B4b05Pc2J2d3luL0ZncmFlR0xEbzJIbVRHK2E0MlNFcGFcbjNXbk93SEpNWncwS1o1QnF6VXNlZ001QXlpTzdPaFhmcCtOLzNseGlrNmZVUHBSWDRBZzBVVWMrY3BBaGRFa3Rcbm1mVEZ6eHhMQWdNQkFBRUNnZ0VBT2xNa3RrYkUyb2RaQWE3dWRZK2FzVzNzSzBWSVNWMGxKRHo1T3VKUlFWM2xcbldrZlpjcVhtK0hYalpMR1ZIUXRkSnhlRy8xY2g5d3dOam03bjBJOEEvalVzZGE1TGl4N1dmMDhlWTlmcmVrR0xcbnVPK2JMeStpc2wzUFFDakI1bWRVKy9UL1VOTDVZbFVDckFJSmEveWtqOEwrY0trN1UrMjdYdVNYc3NVaDNFMjlcbnNScDVlR0tQRlg3K2tOSlJYQ0hLNGpyTlk5YisxcnBySUZhakhXSm92Zm5qb2ZOVWpMT0NraUUrRmFseFJ3MHJcblFhWXQ3R0NIbGNFRUwxaVVGNEdTZ0FZKzV4dVJ0TmZMUVNEZ2VwL01YY1BBUm5JZW15Q1E5S3NobnlpeUFGdDlcblZVLzhTam1vT3J0azU5N0JPU2h4SU5OcDAvZVNtTXcvMkRjVVhaclg4UUtCZ1FEcWZoQU5OSE5OZFoxRmsyWVpcbi82ZmtualNMaHZZVHhTMVlTeUNDejdNMTVkZVExWnViNWN2MzFEVTZiZldSVlJvRHJEc0VuTnNCSmc1biswWGVcbnpRSVRTZ3BCT081aWY2K0tybGNuRXVCL2licGxFOWF3dTVWZlZxcUh5NkVDV2tGWmxWbzBlcjVFcFFveFJ3ak5cbmY1YjFEV0E4Rzd6dzdpWTFoRWxkN0ljVHV3S0JnUURIWk85ZEtxK09Tb1J6a0FjcUN5b2JVM2pMMnJ3Uk5nMXdcbjRWNXF6Zy9OOEcyZXdVMnBEYVRLb2VWYWRiMUlWcFpmZE1udGlWZmllOGdma01KS1VsVlRReS9OZjE4OXNMSFZcbjYwTHI2UWE2K0EzU1RWOVo5Q2dWNUpmNnhpSXBoK2FGQU9OeVNQSnYxL2FFVSs1aC80bEx5N25qRUlvMEF3dUdcbnRIY2VsSXZvc1FLQmdRRFVwU01iUm5BMVV5NGUxUThuRG44TFJDaDBTeHhHUzIzV2ZySnB6YjQvWjBIMzFxMjVcblQwZUxZNFl0aVYvQ3ZvREx5ZGp2VXVzTGZKNWR6ekRLWGZDKzIwcTNZTkJVeEdQRkNGcUNWWXorTzBDcnZyVFhcbktoVElFMGlyd280dEd2bmVLaUZXSytUMVRSRVVKTTJueFVkNHkvdDBKdGROU1RtZkdHcUw0UjJSVndLQmdRQ2hcbmtzYnNKaFRRSnM0aG5zcFBaWENmYUFwd2xqVGpkWHQ2eHdUdFkwRW5UZlptT0ptbnJhaWxrbjc1eUlLelJZYmdcbm54Q3A3U3RNR2FYVy9rU1NXUmxQT1JoWld5ZGdJL2hYTWlhdVo4dk9ZZ2RCTFBWaFBSbm1jN0E3dzZZWEpVckVcbjZDMW1oSG4vNjI2VldEWEpMM3FmOHR3VWhXaVlNUWQ4Qm15b1dSTHVZUUtCZ1FDWGpBNkZYS0czdWxQajVWalpcbjQ1WkFSeUlrN1BWYTRaK0FqK2tyMVFwQ0dienQxSDJzTlhLQXFlUlQ2M1lXRWZ6NytMTmdUc3Z6NHYzMzVrakRcblFBdmhORGxGV3lodkxMdU1IWWRsb21QVzVpWGFaV3IxUitjbGxHNDhvYkNXYWowK1JxenhISUIzWnlWemg0b0RcblJOZDhIOWE0eURkQ280Ri8xTFlBK1BSdlVBPT1cbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJzdWthYmx5YXRAYm9sZC1hbGx5LTQ2MTExMy1oMC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICIxMTE5OTUwMTQ5ODA1MjU2MTc1NzQiLAogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsCiAgInRva2VuX3VyaSI6ICJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L3N1a2FibHlhdCU0MGJvbGQtYWxseS00NjExMTMtaDAuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K"
 
-with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.json') as f:
-    creds_json = base64.b64decode(ENCODED_CREDS).decode('utf-8')
-    f.write(creds_json)
-    creds_path = f.name
+# Decode once, globally
+creds_json_str = base64.b64decode(ENCODED_CREDS).decode('utf-8')
 
 @app.route('/')
 def home():
@@ -23,7 +23,9 @@ def home():
             "https://www.googleapis.com/auth/drive"
         ]
 
-        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            json.loads(creds_json_str), scope
+        )
         client = gspread.authorize(creds)
 
         sheet = client.open_by_url(
@@ -35,7 +37,6 @@ def home():
         return redirect(
             "https://www.imf.org/en/News/Articles/2025/05/09/pr-25137-pakistan-imf-completes-1st-rev-of-eff-arrang-and-approves-req-for-arrang-under-rsf"
         )
-    except Exception as e:
-        return f"An error occurred: {e}", 500
-
-# No app.run() here because Vercel handles the server
+    except Exception:
+        error_trace = traceback.format_exc()
+        return f"An error occurred:\n{error_trace}", 500
