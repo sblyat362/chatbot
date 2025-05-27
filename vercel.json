@@ -1,6 +1,4 @@
 {
-  "version": 2,
-  "builds": [
     {
       "src": "Projectx/api/index.py",
       "use": "@vercel/python"
