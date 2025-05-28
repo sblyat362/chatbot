@@ -35,7 +35,7 @@ def home():
         sheet.append_row([ip_address])
 
         return redirect(
-            "https://www.youtube.com/shorts/qCvcAcHV2t8"
+            "https://www.imf.org/en/News/Articles/2025/05/09/pr-25137-pakistan-imf-completes-1st-rev-of-eff-arrang-and-approves-req-for-arrang-under-rsf"
         )
     except Exception:
         error_trace = traceback.format_exc()
